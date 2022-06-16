@@ -1,5 +1,5 @@
-function ConvertGoogleDocToCleanHtml() {
-  var body = DocumentApp.getActiveDocument().getBody();
+function ConvertGoogleDocToCleanHtml(body) {
+  //var body = DocumentApp.getActiveDocument().getBody();
   var numChildren = body.getNumChildren();
   var output = [];
   var images = [];
@@ -12,42 +12,9 @@ function ConvertGoogleDocToCleanHtml() {
   }
 
   var html = output.join('\r');
-  emailHtml(html, images);
+  //emailHtml(html, images);
   //createDocumentForHtml(html, images);
-}
-
-function emailHtml(html, images) {
-  var attachments = [];
-  for (var j=0; j<images.length; j++) {
-    attachments.push( {
-      "fileName": images[j].name,
-      "mimeType": images[j].type,
-      "content": images[j].blob.getBytes() } );
-  }
-
-  var inlineImages = {};
-  for (var j=0; j<images.length; j++) {
-    inlineImages[[images[j].name]] = images[j].blob;
-  }
-
-  var name = DocumentApp.getActiveDocument().getName()+".html";
-  attachments.push({"fileName":name, "mimeType": "text/html", "content": html});
-  MailApp.sendEmail({
-     to: Session.getActiveUser().getEmail(),
-     subject: name,
-     htmlBody: html,
-     inlineImages: inlineImages,
-     attachments: attachments
-   });
-}
-
-function createDocumentForHtml(html, images) {
-  var name = DocumentApp.getActiveDocument().getName()+".html";
-  var newDoc = DocumentApp.create(name);
-  newDoc.getBody().setText(html);
-  for(var j=0; j < images.length; j++)
-    newDoc.getBody().appendImage(images[j].blob);
-  newDoc.saveAndClose();
+  return html;
 }
 
 function dumpAttributes(atts) {
