@@ -78,9 +78,7 @@ function processItem(item, listCounters, images) {
           || gt === DocumentApp.GlyphType.SQUARE_BULLET) {
         prefix = '<ul><li>', suffix = "</li>";
 
-          suffix += "</ul>";
-        }
-      else {
+      } else {
         // Ordered list (<ol>):
         prefix = "<ol><li>", suffix = "</li>";
       }
