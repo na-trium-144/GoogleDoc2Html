@@ -184,9 +184,13 @@ function processText(item, output) {
       var startPos = indices[i];
       var endPos = i+1 < indices.length ? indices[i+1]: text.length;
       var partText = text.substring(startPos, endPos);
+      var mylink = item.getLinkUrl(startPos);
 
       Logger.log(partText);
 
+      if (partAtts.LINK_URL) {
+        output.push('<a href="' + mylink + '">');
+      }
       if (partAtts.ITALIC) {
         output.push('<i>');
       }
@@ -222,7 +226,9 @@ function processText(item, output) {
       if (partAtts.UNDERLINE) {
         output.push('</u>');
       }
-
+      if (partAtts.LINK_URL) {
+        output.push('</a>');
+      }
     }
   }
 }
