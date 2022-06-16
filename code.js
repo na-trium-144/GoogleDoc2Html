@@ -1,3 +1,13 @@
+function doGet(e) {
+  const req = e.parameter;
+  Logger.log(req);
+  var doc = DocumentApp.openByUrl(req.url);
+  var body = doc.getBody();
+  var html = ConvertGoogleDocToCleanHtml(body);
+  Logger.log(html);
+  return ContentService.createTextOutput(html);
+}
+
 function ConvertGoogleDocToCleanHtml(body) {
   //var body = DocumentApp.getActiveDocument().getBody();
   var numChildren = body.getNumChildren();
