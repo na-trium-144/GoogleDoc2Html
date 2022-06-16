@@ -1,6 +1,6 @@
 ## Google Doc to clean HTML converter ##
 This is a fork of [thejimbirch/GoogleDoc2Html](https://github.com/thejimbirch/GoogleDoc2Html)
-* Added inline link support from [ezramechaber/GoogleDoc2Html](https://github.com/ezramechaber/GoogleDoc2Html/tree/link-support)
+* Applied the PRs of [oazabir/GoogleDoc2Html](https://github.com/oazabir/GoogleDoc2Html)
 * Deploy web app that returns the HTML as a response instead of sending email
 
 ### Usage
