@@ -8,6 +8,14 @@ function doGet(e) {
   return ContentService.createTextOutput(html);
 }
 
+function test(){
+  const url = "https://docs.google.com/document/d/1B7ZEh4xrX3dsFSq3LF9yhrTdoQ9tsqexn1IfCWtd0Rc/edit?usp=sharing"; //replace this with your own document
+  var doc = DocumentApp.openByUrl(url);
+  var body = doc.getBody();
+  var html = ConvertGoogleDocToCleanHtml(body);
+  Logger.log(html);
+}
+
 function ConvertGoogleDocToCleanHtml(body) {
   //var body = DocumentApp.getActiveDocument().getBody();
   var numChildren = body.getNumChildren();
@@ -37,8 +45,70 @@ function dumpAttributes(atts) {
 function processItem(item, listCounters, images) {
   var output = [];
   var prefix = "", suffix = "";
+  var style = "";
 
-  if (item.getType() == DocumentApp.ElementType.PARAGRAPH) {
+  var hasPositionedImages = false;
+	if (item.getPositionedImages) {
+		positionedImages = item.getPositionedImages();
+		hasPositionedImages = true;
+	}
+
+	var itemType = item.getType();
+	
+  if (itemType == DocumentApp.ElementType.PARAGRAPH) {
+		//https://developers.google.com/apps-script/reference/document/paragraph
+
+		if (item.getNumChildren() == 0) {
+			return "<br />";
+		}
+
+		var p = "";
+		
+		if (item.getIndentStart() != null) {
+			p += "margin-left:" + item.getIndentStart() + "; ";
+		} else {
+		     // p += "margin-left: 0; "; // superfluous
+		}
+		
+		// what does getIndentEnd actually do? the value is the same as in getIndentStart
+		/*if (item.getIndentEnd() != null) {
+			p += "margin-right:" + item.getIndentStart() + "; ";
+		} else {
+		     // p += "margin-right: 0; "; // superfluous
+		}*/
+		
+		//Text Alignment
+		switch (item.getAlignment()) {
+			// Add a # for each heading level. No break, so we accumulate the right number.
+			//case DocumentApp.HorizontalAlignment.LEFT:
+			//  p += "text-align: left;"; break;
+		case DocumentApp.HorizontalAlignment.CENTER:
+			p += "text-align: center;";
+			break;
+		case DocumentApp.HorizontalAlignment.RIGHT:
+			p += "text-align: right;";
+			break;
+		case DocumentApp.HorizontalAlignment.JUSTIFY:
+			p += "text-align: justify;";
+			break;
+		default:
+			p += "";
+		}
+
+		//TODO: getLineSpacing(line-height), getSpacingBefore(margin-top), getSpacingAfter(margin-bottom),
+
+		//TODO: 
+		//INDENT_END	    Enum	The end indentation setting in points, for paragraph elements.
+		//INDENT_FIRST_LINE	Enum	The first line indentation setting in points, for paragraph elements.
+		//INDENT_START	    Enum	The start indentation setting in points, for paragraph elements.
+
+		if (p !== "") {
+			style = 'style="' + p + '"';
+		}
+
+		//TODO: add DocumentApp.ParagraphHeading.TITLE, DocumentApp.ParagraphHeading.SUBTITLE
+
+		//Heading or only paragraph
     switch (item.getHeading()) {
         // Add a # for each heading level. No break, so we accumulate the right number.
       case DocumentApp.ParagraphHeading.HEADING6: 
@@ -57,14 +127,13 @@ function processItem(item, listCounters, images) {
         prefix = "<p>", suffix = "</p>";
     }
 
-    if (item.getNumChildren() == 0)
-      return "";
-  }
-  else if (item.getType() == DocumentApp.ElementType.INLINE_IMAGE)
-  {
+    var attr = item.getAttributes();
+  } else if (itemType === DocumentApp.ElementType.INLINE_IMAGE) {
     processImage(item, images, output);
-  }
-  else if (item.getType()===DocumentApp.ElementType.LIST_ITEM) {
+  } else if (itemType === DocumentApp.ElementType.INLINE_DRAWING) {
+		//TODO
+		Logger.log("INLINE_DRAWING: " + JSON.stringify(item));
+  } else if (itemType === DocumentApp.ElementType.LIST_ITEM) {
     var listItem = item;
     var gt = listItem.getGlyphType();
     var key = listItem.getListId() + '.' + listItem.getNestingLevel();
@@ -76,11 +145,11 @@ function processItem(item, listCounters, images) {
       if (gt === DocumentApp.GlyphType.BULLET
           || gt === DocumentApp.GlyphType.HOLLOW_BULLET
           || gt === DocumentApp.GlyphType.SQUARE_BULLET) {
-        prefix = '<ul><li>', suffix = "</li>";
+        prefix = '<ul style="margin:0;"><li>', suffix = "</li>";
 
       } else {
         // Ordered list (<ol>):
-        prefix = "<ol><li>", suffix = "</li>";
+        prefix = '<ol style="margin:0;"><li>', suffix = "</li>";
       }
     }
     else {
@@ -88,7 +157,12 @@ function processItem(item, listCounters, images) {
       suffix = "</li>";
     }
 
-    if (item.isAtDocumentEnd() || (item.getNextSibling() && (item.getNextSibling().getType() != DocumentApp.ElementType.LIST_ITEM))) {
+    var nextSibling = listItem.getNextSibling();
+    if (item.isAtDocumentEnd() || (
+      nextSibling && (
+        nextSibling.getType() != DocumentApp.ElementType.LIST_ITEM ||
+        nextSibling.getNestingLevel() < listItem.getNestingLevel()
+    ))) {
       if (gt === DocumentApp.GlyphType.BULLET
           || gt === DocumentApp.GlyphType.HOLLOW_BULLET
           || gt === DocumentApp.GlyphType.SQUARE_BULLET) {
@@ -103,9 +177,84 @@ function processItem(item, listCounters, images) {
 
     counter++;
     listCounters[key] = counter;
-  }
+  } else if (itemType === DocumentApp.ElementType.TABLE) {
+		var row = item.getRow(0)
+		var numCells = row.getNumCells();
+		var tableWidth = 0;
+
+		for (var i = 0; i < numCells; i++) {
+			tableWidth += item.getColumnWidth(i);
+		}
+		Logger.log("TABLE tableWidth: " + tableWidth);
+
+		//https://stackoverflow.com/questions/339923/set-cellpadding-and-cellspacing-in-css
+		var style = ' style="border-collapse: collapse; width:' + tableWidth + 'px; "';
+
+		prefix = '<table' + style + '>', suffix = "</table>";
+		//Logger.log("TABLE: " + JSON.stringify(item));
+	} else if (itemType === DocumentApp.ElementType.TABLE_ROW) {
+
+		var minimumHeight = item.getMinimumHeight();
+		Logger.log("TABLE_ROW getMinimumHeight: " + minimumHeight);
+
+		prefix = "<tr>", suffix = "</tr>";
+		//Logger.log("TABLE_ROW: " + JSON.stringify(item));
+	} else if (itemType === DocumentApp.ElementType.TABLE_CELL) {
+		/*
+		BACKGROUND_COLOR	Enum	The background color of an element (Paragraph, Table, etc) or document.
+		BORDER_COLOR	Enum	The border color, for table elements.
+		BORDER_WIDTH	Enum	The border width in points, for table elements.
+		PADDING_BOTTOM	Enum	The bottom padding setting in points, for table cell elements.
+		PADDING_LEFT	Enum	The left padding setting in points, for table cell elements.
+		PADDING_RIGHT	Enum	The right padding setting in points, for table cell elements.
+		PADDING_TOP	    Enum	The top padding setting in points, for table cell elements.
+		VERTICAL_ALIGNMENT	Enum	The vertical alignment setting, for table cell elements.
+		WIDTH	        Enum	The width setting, for table cell and image elements.
+		*/
+
+		//https://wiki.selfhtml.org/wiki/HTML/Tabellen/Zellen_verbinden
+		var colSpan = item.getColSpan();
+		Logger.log("TABLE_CELL getColSpan: " + colSpan);
+		// colspan="3"
+
+		var rowSpan = item.getRowSpan();
+		Logger.log("TABLE_CELL getRowSpan: " + rowSpan);
+		// rowspan ="3"
+
+		//TODO: WIDTH must be recalculated in percent
+		var atts = item.getAttributes();
+
+		var style = ' style=" width:' + atts.WIDTH + 'px; border: 1px solid black; padding: 5px;"';
+
+		prefix = '<td' + style + '>', suffix = "</td>";
+		//Logger.log("TABLE_CELL: " + JSON.stringify(item));
+	} else if (itemType === DocumentApp.ElementType.FOOTNOTE) {
+		//TODO
+		var note = item.getFootnoteContents();
+		var counter = footnotes.length + 1;
+		output.push("<sup><a name='link" + counter + "' href='#footnote" + counter + "'>[" + counter + "]</a></sup>");
+		var newFootnote = "<aside class='footnote' epub:type='footnote' id='footnote" + counter + "'><a name='footnote" + counter + "' epub:type='noteref'>[" + counter + "]</a>";
+		var numChildren = note.getNumChildren();
+		for (var i = 0; i < numChildren; i++) {
+			var child = note.getChild(i);
+			newFootnote += processItem(child, listCounters, images, imagesOptions, footnotes);
+		}
+		newFootnote += "<a href='#link" + counter + "' id='#link" + counter + "'>↩</a></aside>"
+		footnotes.push(newFootnote);
+		Logger.log("FOOTNOTE: " + JSON.stringify(item));
+	} else if (itemType === DocumentApp.ElementType.HORIZONTAL_RULE) {
+		output.push("<hr />");
+		//Logger.log("HORIZONTAL_RULE: " + JSON.stringify(item));
+	} else if (itemType === DocumentApp.ElementType.UNSUPPORTED) {
+		Logger.log("UNSUPPORTED: " + JSON.stringify(item));
+	}
+
 
   output.push(prefix);
+
+/*  if (hasPositionedImages === true) {
+		processPositionedImages(positionedImages, images, output, imagesOptions);
+	}*/
 
   if (item.getType() == DocumentApp.ElementType.TEXT) {
     processText(item, output);
@@ -134,76 +283,97 @@ function processText(item, output) {
   var text = item.getText();
   var indices = item.getTextAttributeIndices();
 
-  if (indices.length <= 1) {
-    // Assuming that a whole para fully italic is a quote
-    if(item.isBold()) {
-      output.push('<strong>' + text + '</strong>');
+  for (var i=0; i < indices.length; i ++) {
+    var partAtts = item.getAttributes(indices[i]);
+    var startPos = indices[i];
+    var endPos = i+1 < indices.length ? indices[i+1]: text.length;
+    var partText = text.substring(startPos, endPos);
+    var mylink = item.getLinkUrl(startPos);
+
+    partText = partText.replace(new RegExp("(\r)", 'g'), "<br />\r");
+    //Logger.log(partText);
+
+    var style = "";
+
+    //TODO if only ITALIC use: <blockquote></blockquote>
+
+		//TODO: change html tags to css (i, strong, u)
+
+    if (partAtts.LINK_URL) {
+      output.push('<a href="' + mylink + '">');
     }
-    else if(item.isItalic()) {
-      output.push('<blockquote>' + text + '</blockquote>');
+		//css font-style:italic;
+    if (partAtts.ITALIC) {
+      output.push('<i>');
     }
-    else if (text.trim().indexOf('http://') == 0) {
-      output.push('<a href="' + text + '" rel="nofollow">' + text + '</a>');
+    //css font-weight: bold;
+    if (partAtts.BOLD) {
+      output.push('<strong>');
     }
-    else if (text.trim().indexOf('https://') == 0) {
-      output.push('<a href="' + text + '" rel="nofollow">' + text + '</a>');
+    //css text-decoration: underline
+    if (partAtts.UNDERLINE) {
+      output.push('<u>');
+    }
+
+    // font family, color and size changes disabled
+		/*if (partAtts.FONT_FAMILY) {
+			style = style + 'font-family: ' + partAtts.FONT_FAMILY + '; ';
+		}
+		if (partAtts.FONT_SIZE) {
+			var pt = partAtts.FONT_SIZE;
+			var em = pixelToEm(pointsToPixel(pt));
+			style = style + 'font-size: ' + pt + 'pt;  font-size: ' + em + 'em; ';
+		}
+		if (partAtts.FOREGROUND_COLOR) {
+			style = style + 'color: ' + partAtts.FOREGROUND_COLOR + '; '; //partAtts.FOREGROUND_COLOR
+		}
+		if (partAtts.BACKGROUND_COLOR) {
+			style = style + 'background-color: ' + partAtts.BACKGROUND_COLOR + '; ';
+		}*/
+		if (partAtts.STRIKETHROUGH) {
+			style = style + 'text-decoration: line-through; ';
+		}
+
+		var a = item.getTextAlignment(startPos);
+		if (a !== DocumentApp.TextAlignment.NORMAL && a !== null) {
+			if (a === DocumentApp.TextAlignment.SUBSCRIPT) {
+				style = style + 'vertical-align : sub; font-size : 60%; ';
+			} else if (a === DocumentApp.TextAlignment.SUPERSCRIPT) {
+				style = style + 'vertical-align : super; font-size : 60%; ';
+			}
+		}
+
+    if (style !== "") {
+      style = ' style="' + style + '"';
+    }
+
+    // If someone has written [xxx] and made this whole text some special font, like superscript
+    // then treat it as a reference and make it superscript.
+    // Unfortunately in Google Docs, there's no way to detect superscript
+    if (partText.indexOf('[')==0 && partText[partText.length-1] == ']') {
+      output.push('<sup' + style + '>' + partText + '</sup>');
+    }
+    else if (partText.trim().indexOf('http://') == 0) {
+      output.push('<a' + style + ' href="' + partText + '" rel="nofollow">' + partText + '</a>');
+    }
+    else if (partText.trim().indexOf('https://') == 0) {
+      output.push('<a' + style + ' href="' + partText + '" rel="nofollow">' + partText + '</a>');
     }
     else {
-      output.push(text);
+      output.push('<span' + style + '>' + partText + '</span>');
     }
-  }
-  else {
 
-    for (var i=0; i < indices.length; i ++) {
-      var partAtts = item.getAttributes(indices[i]);
-      var startPos = indices[i];
-      var endPos = i+1 < indices.length ? indices[i+1]: text.length;
-      var partText = text.substring(startPos, endPos);
-      var mylink = item.getLinkUrl(startPos);
-
-      Logger.log(partText);
-
-      if (partAtts.LINK_URL) {
-        output.push('<a href="' + mylink + '">');
-      }
-      if (partAtts.ITALIC) {
-        output.push('<i>');
-      }
-      if (partAtts.BOLD) {
-        output.push('<strong>');
-      }
-      if (partAtts.UNDERLINE) {
-        output.push('<u>');
-      }
-
-      // If someone has written [xxx] and made this whole text some special font, like superscript
-      // then treat it as a reference and make it superscript.
-      // Unfortunately in Google Docs, there's no way to detect superscript
-      if (partText.indexOf('[')==0 && partText[partText.length-1] == ']') {
-        output.push('<sup>' + partText + '</sup>');
-      }
-      else if (partText.trim().indexOf('http://') == 0) {
-        output.push('<a href="' + partText + '" rel="nofollow">' + partText + '</a>');
-      }
-      else if (partText.trim().indexOf('https://') == 0) {
-        output.push('<a href="' + partText + '" rel="nofollow">' + partText + '</a>');
-      }
-      else {
-        output.push(partText);
-      }
-
-      if (partAtts.ITALIC) {
-        output.push('</i>');
-      }
-      if (partAtts.BOLD) {
-        output.push('</strong>');
-      }
-      if (partAtts.UNDERLINE) {
-        output.push('</u>');
-      }
-      if (partAtts.LINK_URL) {
-        output.push('</a>');
-      }
+    if (partAtts.ITALIC) {
+      output.push('</i>');
+    }
+    if (partAtts.BOLD) {
+      output.push('</strong>');
+    }
+    if (partAtts.UNDERLINE) {
+      output.push('</u>');
+    }
+    if (partAtts.LINK_URL) {
+      output.push('</a>');
     }
   }
 }
