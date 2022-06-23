@@ -240,7 +240,7 @@ function processItem(item, listCounters, images) {
     if (p !== "") {
 			style = ' style="' + p + '"';
 		}
-		prefix = '<table' + style + '>', suffix = "</table>";
+		prefix = '<table' + style + '>\r', suffix = "</table>";
 		//Logger.log("TABLE: " + JSON.stringify(item));
 	} else if (itemType === DocumentApp.ElementType.TABLE_ROW) {
 
@@ -255,7 +255,7 @@ function processItem(item, listCounters, images) {
     if (p !== "") {
 			style = ' style="' + p + '"';
 		}
-		prefix = "<tr" + style + ">", suffix = "</tr>";
+		prefix = "<tr" + style + ">\r", suffix = "</tr>";
 		//Logger.log("TABLE_ROW: " + JSON.stringify(item));
 	} else if (itemType === DocumentApp.ElementType.TABLE_CELL) {
 		/*
@@ -304,7 +304,7 @@ function processItem(item, listCounters, images) {
 			style = ' style="' + p + '"';
 		}
 
-		prefix = '<td' + style + span + '>', suffix = "</td>";
+		prefix = '<td' + style + span + '>', suffix = "</td>\r";
 		//Logger.log("TABLE_CELL: " + JSON.stringify(item));
 	} else if (itemType === DocumentApp.ElementType.FOOTNOTE) {
 		//TODO
