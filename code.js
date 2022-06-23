@@ -54,22 +54,6 @@ function processItem(item, listCounters, images) {
 	}
 
 	var itemType = item.getType();
-	
-  var p = "";
-
-  if(item.getSpacingBefore && item.getSpacingBefore() != null){
-    p += "margin-top: " + item.getSpacingBefore() + "; ";
-  }else{
-    p += "margin-top: 0; ";
-  }
-  if(item.getSpacingAfter && item.getSpacingAfter() != null){
-    p += "margin-bottom: " + item.getSpacingAfter() + "; ";
-  }else{
-    p += "margin-bottom: 0; ";
-  }
-  if(item.getLineSpacing && item.getLineSpacing() != null){
-    p += "line-height: " + item.getLineSpacing() + "; ";
-  }
 
   if (itemType == DocumentApp.ElementType.PARAGRAPH) {
 		//https://developers.google.com/apps-script/reference/document/paragraph
@@ -78,15 +62,30 @@ function processItem(item, listCounters, images) {
 			return "<br />";
 		}
 
+    var p = "";
+
     if (item.getIndentStart() != null) {
       p += "margin-left:" + item.getIndentStart() + "; ";
     }
     if (item.getIndentFirstLine() != null) {
       p += "text-indent:" + item.getIndentFirstLine() + "; ";
     }
-    // what does getIndentEnd actually do? the value is the same as in getIndentStart
     if (item.getIndentEnd() != null) {
       p += "margin-right:" + item.getIndentEnd() + "; ";
+    }
+
+    if(item.getLineSpacing() != null){
+      p += "line-height: " + item.getLineSpacing() + "; ";
+    }
+    if(item.getSpacingBefore() != null){
+      p += "margin-top: " + item.getSpacingBefore() + "; ";
+    }else{
+      p += "margin-top: 0; ";
+    }
+    if(item.getSpacingAfter() != null){
+      p += "margin-bottom: " + item.getSpacingAfter() + "; ";
+    }else{
+      p += "margin-bottom: 0; ";
     }
 
 		//Text Alignment
@@ -151,6 +150,22 @@ function processItem(item, listCounters, images) {
     var key = listItem.getListId() + '.' + listItem.getNestingLevel();
     var counter = listCounters[key] || 0;
 
+    var p = "";
+
+    if(item.getLineSpacing() != null){
+      p += "line-height: " + item.getLineSpacing() + "; ";
+    }
+    if(item.getSpacingBefore() != null){
+      p += "margin-top: " + item.getSpacingBefore() + "; ";
+    }else{
+      p += "margin-top: 0; ";
+    }
+    if(item.getSpacingAfter() != null){
+      p += "margin-bottom: " + item.getSpacingAfter() + "; ";
+    }else{
+      p += "margin-bottom: 0; ";
+    }
+
     if (p !== "") {
 			style = ' style="' + p + '"';
 		}
@@ -202,21 +217,45 @@ function processItem(item, listCounters, images) {
 		var tableWidth = 0;
 
 		for (var i = 0; i < numCells; i++) {
-			tableWidth += item.getColumnWidth(i);
+      if(item.getColumnWidth(i) != null){
+			  tableWidth += item.getColumnWidth(i);
+      }else{
+        tableWidth = 0; //use default width
+        break;
+      }
+      //Logger.log(item.getColumnWidth(i))
 		}
-		Logger.log("TABLE tableWidth: " + tableWidth);
+		//Logger.log("TABLE tableWidth: " + tableWidth);
+
+    if(tableWidth == 0){
+      //todo: tableWidth = width of the document;
+    }
 
 		//https://stackoverflow.com/questions/339923/set-cellpadding-and-cellspacing-in-css
-		var style = ' style="border-collapse: collapse; width:' + tableWidth + 'px; "';
+		var p = "border-collapse: collapse; ";
+    if(tableWidth != 0){
+      p += "width: " + tableWidth + "; ";
+    }
 
+    if (p !== "") {
+			style = ' style="' + p + '"';
+		}
 		prefix = '<table' + style + '>', suffix = "</table>";
 		//Logger.log("TABLE: " + JSON.stringify(item));
 	} else if (itemType === DocumentApp.ElementType.TABLE_ROW) {
 
 		var minimumHeight = item.getMinimumHeight();
-		Logger.log("TABLE_ROW getMinimumHeight: " + minimumHeight);
+		//Logger.log("TABLE_ROW getMinimumHeight: " + minimumHeight);
 
-		prefix = "<tr>", suffix = "</tr>";
+    var p = "";
+    if(minimumHeight != null){
+      p += "height: " + minimumHeight + "; ";
+    }
+
+    if (p !== "") {
+			style = ' style="' + p + '"';
+		}
+		prefix = "<tr" + style + ">", suffix = "</tr>";
 		//Logger.log("TABLE_ROW: " + JSON.stringify(item));
 	} else if (itemType === DocumentApp.ElementType.TABLE_CELL) {
 		/*
@@ -240,12 +279,32 @@ function processItem(item, listCounters, images) {
 		Logger.log("TABLE_CELL getRowSpan: " + rowSpan);
 		// rowspan ="3"
 
+    var span = "";
+    if(colSpan != 1){
+      span += " colspan=" + colSpan;
+    }
+    if(rowSpan != 1){
+      span += " rowspan=" + rowSpan;
+    }
+    if(colSpan == 0 || rowSpan == 0){
+      return "";
+      // this cell is disabled
+    }
+    
 		//TODO: WIDTH must be recalculated in percent
 		var atts = item.getAttributes();
 
-		var style = ' style=" width:' + atts.WIDTH + 'px; border: 1px solid black; padding: 5px;"';
 
-		prefix = '<td' + style + '>', suffix = "</td>";
+		var p = "border: 1px solid black; padding: 5px; ";
+    if (atts.WIDTH != null){
+      p += "width: " + atts.WIDTH + "; ";
+    }
+
+    if (p !== "") {
+			style = ' style="' + p + '"';
+		}
+
+		prefix = '<td' + style + span + '>', suffix = "</td>";
 		//Logger.log("TABLE_CELL: " + JSON.stringify(item));
 	} else if (itemType === DocumentApp.ElementType.FOOTNOTE) {
 		//TODO
