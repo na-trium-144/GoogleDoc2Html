@@ -55,6 +55,22 @@ function processItem(item, listCounters, images) {
 
 	var itemType = item.getType();
 	
+  var p = "";
+
+  if(item.getSpacingBefore && item.getSpacingBefore() != null){
+    p += "margin-top: " + item.getSpacingBefore() + "; ";
+  }else{
+    p += "margin-top: 0; ";
+  }
+  if(item.getSpacingAfter && item.getSpacingAfter() != null){
+    p += "margin-bottom: " + item.getSpacingAfter() + "; ";
+  }else{
+    p += "margin-bottom: 0; ";
+  }
+  if(item.getLineSpacing && item.getLineSpacing() != null){
+    p += "line-height: " + item.getLineSpacing() + "; ";
+  }
+
   if (itemType == DocumentApp.ElementType.PARAGRAPH) {
 		//https://developers.google.com/apps-script/reference/document/paragraph
 
@@ -62,21 +78,17 @@ function processItem(item, listCounters, images) {
 			return "<br />";
 		}
 
-		var p = "";
-		
-		if (item.getIndentStart() != null) {
-			p += "margin-left:" + item.getIndentStart() + "; ";
-		} else {
-		     // p += "margin-left: 0; "; // superfluous
-		}
-		
-		// what does getIndentEnd actually do? the value is the same as in getIndentStart
-		/*if (item.getIndentEnd() != null) {
-			p += "margin-right:" + item.getIndentStart() + "; ";
-		} else {
-		     // p += "margin-right: 0; "; // superfluous
-		}*/
-		
+    if (item.getIndentStart() != null) {
+      p += "margin-left:" + item.getIndentStart() + "; ";
+    }
+    if (item.getIndentFirstLine() != null) {
+      p += "text-indent:" + item.getIndentFirstLine() + "; ";
+    }
+    // what does getIndentEnd actually do? the value is the same as in getIndentStart
+    if (item.getIndentEnd() != null) {
+      p += "margin-right:" + item.getIndentEnd() + "; ";
+    }
+
 		//Text Alignment
 		switch (item.getAlignment()) {
 			// Add a # for each heading level. No break, so we accumulate the right number.
@@ -103,7 +115,7 @@ function processItem(item, listCounters, images) {
 		//INDENT_START	    Enum	The start indentation setting in points, for paragraph elements.
 
 		if (p !== "") {
-			style = 'style="' + p + '"';
+			style = ' style="' + p + '"';
 		}
 
 		//TODO: add DocumentApp.ParagraphHeading.TITLE, DocumentApp.ParagraphHeading.SUBTITLE
@@ -112,19 +124,19 @@ function processItem(item, listCounters, images) {
     switch (item.getHeading()) {
         // Add a # for each heading level. No break, so we accumulate the right number.
       case DocumentApp.ParagraphHeading.HEADING6: 
-        prefix = "<h6>", suffix = "</h6>"; break;
+        prefix = "<h6" + style + ">", suffix = "</h6>"; break;
       case DocumentApp.ParagraphHeading.HEADING5: 
-        prefix = "<h5>", suffix = "</h5>"; break;
+        prefix = "<h5" + style + ">", suffix = "</h5>"; break;
       case DocumentApp.ParagraphHeading.HEADING4:
-        prefix = "<h4>", suffix = "</h4>"; break;
+        prefix = "<h4" + style + ">", suffix = "</h4>"; break;
       case DocumentApp.ParagraphHeading.HEADING3:
-        prefix = "<h3>", suffix = "</h3>"; break;
+        prefix = "<h3" + style + ">", suffix = "</h3>"; break;
       case DocumentApp.ParagraphHeading.HEADING2:
-        prefix = "<h2>", suffix = "</h2>"; break;
+        prefix = "<h2" + style + ">", suffix = "</h2>"; break;
       case DocumentApp.ParagraphHeading.HEADING1:
-        prefix = "<h1>", suffix = "</h1>"; break;
+        prefix = "<h1" + style + ">", suffix = "</h1>"; break;
       default: 
-        prefix = "<p>", suffix = "</p>";
+        prefix = "<p" + style + ">", suffix = "</p>";
     }
 
     var attr = item.getAttributes();
@@ -139,21 +151,25 @@ function processItem(item, listCounters, images) {
     var key = listItem.getListId() + '.' + listItem.getNestingLevel();
     var counter = listCounters[key] || 0;
 
+    if (p !== "") {
+			style = ' style="' + p + '"';
+		}
+
     // First list item
     if ( counter == 0 ) {
       // Bullet list (<ul>):
       if (gt === DocumentApp.GlyphType.BULLET
           || gt === DocumentApp.GlyphType.HOLLOW_BULLET
           || gt === DocumentApp.GlyphType.SQUARE_BULLET) {
-        prefix = '<ul><li>', suffix = "</li>";
+        prefix = "<ul><li" + style + ">", suffix = "</li>";
 
       } else {
         // Ordered list (<ol>):
-        prefix = '<ol><li>', suffix = "</li>";
+        prefix = "<ol><li" + style + ">", suffix = "</li>";
       }
     }
     else {
-      prefix = "<li>";
+      prefix = "<li" + style + ">";
       suffix = "</li>";
     }
 
