@@ -145,11 +145,11 @@ function processItem(item, listCounters, images) {
       if (gt === DocumentApp.GlyphType.BULLET
           || gt === DocumentApp.GlyphType.HOLLOW_BULLET
           || gt === DocumentApp.GlyphType.SQUARE_BULLET) {
-        prefix = '<ul style="margin:0;"><li>', suffix = "</li>";
+        prefix = '<ul><li>', suffix = "</li>";
 
       } else {
         // Ordered list (<ol>):
-        prefix = '<ol style="margin:0;"><li>', suffix = "</li>";
+        prefix = '<ol><li>', suffix = "</li>";
       }
     }
     else {
@@ -158,11 +158,13 @@ function processItem(item, listCounters, images) {
     }
 
     var nextSibling = listItem.getNextSibling();
-    if (item.isAtDocumentEnd() || (
-      nextSibling && (
-        nextSibling.getType() != DocumentApp.ElementType.LIST_ITEM ||
-        nextSibling.getNestingLevel() < listItem.getNestingLevel()
-    ))) {
+    var nestingLevel = listItem.getNestingLevel();
+    while(nestingLevel >= 0 && 
+      (item.isAtDocumentEnd() || (
+        nextSibling && (
+          nextSibling.getType() != DocumentApp.ElementType.LIST_ITEM ||
+          nextSibling.getNestingLevel() < nestingLevel
+      )))) {
       if (gt === DocumentApp.GlyphType.BULLET
           || gt === DocumentApp.GlyphType.HOLLOW_BULLET
           || gt === DocumentApp.GlyphType.SQUARE_BULLET) {
@@ -172,6 +174,7 @@ function processItem(item, listCounters, images) {
         // Ordered list (<ol>):
         suffix += "</ol>";
       }
+      nestingLevel--;
 
     }
 
