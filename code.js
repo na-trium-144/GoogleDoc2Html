@@ -1,7 +1,11 @@
+var docUrl;
+var properties = PropertiesService.getScriptProperties();
 function doGet(e) {
   const req = e.parameter;
   Logger.log(req);
-  var doc = DocumentApp.openByUrl(req.url);
+  docUrl = req.url;
+  trashSavedImages();
+  var doc = DocumentApp.openByUrl(docUrl);
   var body = doc.getBody();
   var html = ConvertGoogleDocToCleanHtml(body);
   Logger.log(html);
@@ -10,23 +14,25 @@ function doGet(e) {
 
 function test(){
   const url = "https://docs.google.com/document/d/1B7ZEh4xrX3dsFSq3LF9yhrTdoQ9tsqexn1IfCWtd0Rc/edit?usp=sharing"; //replace this with your own document
-  var doc = DocumentApp.openByUrl(url);
+  docUrl = url;
+  trashSavedImages();
+  var doc = DocumentApp.openByUrl(docUrl);
   var body = doc.getBody();
   var html = ConvertGoogleDocToCleanHtml(body);
   Logger.log(html);
 }
 
+
 function ConvertGoogleDocToCleanHtml(body) {
   //var body = DocumentApp.getActiveDocument().getBody();
   var numChildren = body.getNumChildren();
   var output = [];
-  var images = [];
   var listCounters = {};
 
   // Walk through all the child elements of the body.
   for (var i = 0; i < numChildren; i++) {
     var child = body.getChild(i);
-    output.push(processItem(child, listCounters, images));
+    output.push(processItem(child, listCounters));
   }
 
   var html = output.join('\r');
@@ -42,7 +48,7 @@ function dumpAttributes(atts) {
   }
 }
 
-function processItem(item, listCounters, images) {
+function processItem(item, listCounters) {
   var output = [];
   var prefix = "", suffix = "";
   var style = "";
@@ -140,7 +146,7 @@ function processItem(item, listCounters, images) {
 
     var attr = item.getAttributes();
   } else if (itemType === DocumentApp.ElementType.INLINE_IMAGE) {
-    processImage(item, images, output);
+    processImage(item, output);
   } else if (itemType === DocumentApp.ElementType.INLINE_DRAWING) {
 		//TODO
 		Logger.log("INLINE_DRAWING: " + JSON.stringify(item));
@@ -346,7 +352,7 @@ function processItem(item, listCounters, images) {
       // Walk through all the child elements of the doc.
       for (var i = 0; i < numChildren; i++) {
         var child = item.getChild(i);
-        output.push(processItem(child, listCounters, images));
+        output.push(processItem(child, listCounters));
       }
     }
 
@@ -456,11 +462,9 @@ function processText(item, output) {
   }
 }
 
-
-function processImage(item, images, output)
+function processImage(item, output)
 {
-  images = images || [];
-  var blob = item.getBlob();
+  var blob = item.getBlob().copyBlob();
   var contentType = blob.getContentType();
   var extension = "";
   if (/\/png$/.test(contentType)) {
@@ -472,13 +476,26 @@ function processImage(item, images, output)
   } else {
     throw "Unsupported image type: "+contentType;
   }
-  var imagePrefix = "Image_";
-  var imageCounter = images.length;
-  var name = imagePrefix + imageCounter + extension;
-  imageCounter++;
-  output.push('<img src="cid:'+name+'" />');
-  images.push( {
-    "blob": blob,
-    "type": contentType,
-    "name": name});
+  blob.setName("Doc2HTML_Image" + extension);
+  var file = DriveApp.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  output.push('<img src="' + file.getDownloadUrl() + '" />');
+  var ids = properties.getProperty(docUrl);
+  if(ids == null){
+    ids = file.getId();
+  }else{
+    ids += "," + file.getId();
+  }
+  properties.setProperty(docUrl, ids);
+}
+
+function trashSavedImages(){
+  let fileIds = properties.getProperty(docUrl);
+  if(fileIds != null){
+    for(const id of fileIds.split(",")){
+      let file = DriveApp.getFileById(id);
+      file.setTrashed(true);
+    }
+    properties.deleteProperty(docUrl);
+  }
 }
