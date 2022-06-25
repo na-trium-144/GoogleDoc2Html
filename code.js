@@ -2,29 +2,36 @@ var docUrl;
 var properties = PropertiesService.getScriptProperties();
 function doGet(e) {
   const req = e.parameter;
-  Logger.log(req);
   docUrl = req.url;
-  trashSavedImages();
-  var doc = DocumentApp.openByUrl(docUrl);
-  var body = doc.getBody();
-  var html = ConvertGoogleDocToCleanHtml(body);
-  Logger.log(html);
-  return ContentService.createTextOutput(html);
+  if(req.type === "time"){
+    const lastUpdated = getLastUpdated().toJSON();
+    return ContentService.createTextOutput(lastUpdated);
+  }else if(req.type === "html"){
+    var html = ConvertGoogleDocToCleanHtml();
+    return HtmlService.createHtmlOutput(html);
+  }else{
+    var html = ConvertGoogleDocToCleanHtml();
+    return ContentService.createTextOutput(html);
+  }
 }
 
 function test(){
-  const url = "https://docs.google.com/document/d/1B7ZEh4xrX3dsFSq3LF9yhrTdoQ9tsqexn1IfCWtd0Rc/edit?usp=sharing"; //replace this with your own document
-  docUrl = url;
-  trashSavedImages();
-  var doc = DocumentApp.openByUrl(docUrl);
-  var body = doc.getBody();
-  var html = ConvertGoogleDocToCleanHtml(body);
+  docUrl = "https://docs.google.com/document/d/1B7ZEh4xrX3dsFSq3LF9yhrTdoQ9tsqexn1IfCWtd0Rc/edit?usp=sharing"; //replace this with your own document
+  Logger.log(getLastUpdated().toJSON());
+  var html = ConvertGoogleDocToCleanHtml();
   Logger.log(html);
 }
 
+function getLastUpdated(){
+  const docId = DocumentApp.openByUrl(docUrl).getId();
+  return DriveApp.getFileById(docId).getLastUpdated();
+}
 
-function ConvertGoogleDocToCleanHtml(body) {
+function ConvertGoogleDocToCleanHtml() {
   //var body = DocumentApp.getActiveDocument().getBody();
+  trashSavedImages();
+  var doc = DocumentApp.openByUrl(docUrl);
+  var body = doc.getBody();
   var numChildren = body.getNumChildren();
   var output = [];
   var listCounters = {};
@@ -278,11 +285,11 @@ function processItem(item, listCounters) {
 
 		//https://wiki.selfhtml.org/wiki/HTML/Tabellen/Zellen_verbinden
 		var colSpan = item.getColSpan();
-		Logger.log("TABLE_CELL getColSpan: " + colSpan);
+		//Logger.log("TABLE_CELL getColSpan: " + colSpan);
 		// colspan="3"
 
 		var rowSpan = item.getRowSpan();
-		Logger.log("TABLE_CELL getRowSpan: " + rowSpan);
+		//Logger.log("TABLE_CELL getRowSpan: " + rowSpan);
 		// rowspan ="3"
 
     var span = "";
@@ -336,9 +343,11 @@ function processItem(item, listCounters) {
 
   output.push(prefix);
 
-/*  if (hasPositionedImages === true) {
-		processPositionedImages(positionedImages, images, output, imagesOptions);
-	}*/
+  if (hasPositionedImages === true) {
+		//todo
+    //processPositionedImages(positionedImages, images, output, imagesOptions);
+    Logger.log("hasPositionedImages");
+	}
 
   if (item.getType() == DocumentApp.ElementType.TEXT) {
     processText(item, output);
