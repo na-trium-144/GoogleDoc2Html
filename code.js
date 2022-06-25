@@ -479,7 +479,10 @@ function processImage(item, output)
   blob.setName("Doc2HTML_Image" + extension);
   var file = DriveApp.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  output.push('<img src="' + file.getDownloadUrl() + '" />');
+  const imageUrl = file.getDownloadUrl();
+  const width = item.getWidth();
+  const height = item.getHeight();
+  output.push(`<img src="${imageUrl}" width=${width} height=${height}/>`);
   var ids = properties.getProperty(docUrl);
   if(ids == null){
     ids = file.getId();
