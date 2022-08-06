@@ -218,12 +218,14 @@ function processItem(item, listCounters) {
         // Ordered list (<ol>):
         suffix += "</ol>";
       }
+      listCounters[listItem.getListId() + '.' + nestingLevel] = 0;
       nestingLevel--;
-
+    }
+    if(nestingLevel == listItem.getNestingLevel()){
+      counter++;
+      listCounters[key] = counter;
     }
 
-    counter++;
-    listCounters[key] = counter;
   } else if (itemType === DocumentApp.ElementType.TABLE) {
 		var row = item.getRow(0)
 		var numCells = row.getNumCells();
