@@ -81,7 +81,7 @@ function processItem(item, listCounters) {
       p += "margin-left:" + item.getIndentStart() + "; ";
     }
     if (item.getIndentFirstLine() != null) {
-      p += "text-indent:" + item.getIndentFirstLine() + "; ";
+      p += "text-indent:" + (item.getIndentFirstLine() - item.getIndentStart()) + "; ";
     }
     if (item.getIndentEnd() != null) {
       p += "margin-right:" + item.getIndentEnd() + "; ";
@@ -435,6 +435,15 @@ function processText(item, output) {
 				style = style + 'vertical-align : super; font-size : 60%; ';
 			}
 		}
+
+    tabs = 0;
+    while (partText !== "" && partText[0] === "\t"){
+      partText = partText.slice(1);
+      tabs++;
+    }
+    if (tabs !== 0){
+      style += 'margin-left: ' + (tabs * 36) + "; ";
+    }
 
     if (style !== "") {
       style = ' style="' + style + '"';
