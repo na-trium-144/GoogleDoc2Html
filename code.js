@@ -3,14 +3,23 @@ var properties = PropertiesService.getScriptProperties();
 function doGet(e) {
   const req = e.parameter;
   docUrl = req.url;
+  var html;
   if(req.type === "time"){
     const lastUpdated = getLastUpdated().toJSON();
     return ContentService.createTextOutput(lastUpdated);
   }else if(req.type === "html"){
-    var html = ConvertGoogleDocToCleanHtml();
+    try{
+      html = ConvertGoogleDocToCleanHtml();
+    }catch{
+      html = ConvertGoogleSheetToCleanHtml();
+    }
     return HtmlService.createHtmlOutput(html);
   }else{
-    var html = ConvertGoogleDocToCleanHtml();
+    try{
+      html = ConvertGoogleDocToCleanHtml();
+    }catch{
+      html = ConvertGoogleSheetToCleanHtml();
+    }
     return ContentService.createTextOutput(html);
   }
 }
@@ -18,13 +27,24 @@ function doGet(e) {
 function test(){
   docUrl = "https://docs.google.com/document/d/1B7ZEh4xrX3dsFSq3LF9yhrTdoQ9tsqexn1IfCWtd0Rc/edit?usp=sharing"; //replace this with your own document
   Logger.log(getLastUpdated().toJSON());
-  var html = ConvertGoogleDocToCleanHtml();
+  var html;
+  try{
+    html = ConvertGoogleDocToCleanHtml();
+  }catch{
+    html = ConvertGoogleSheetToCleanHtml();
+  }
+
   Logger.log(html);
 }
 
 function getLastUpdated(){
-  const docId = DocumentApp.openByUrl(docUrl).getId();
-  return DriveApp.getFileById(docId).getLastUpdated();
+  try{
+    const docId = DocumentApp.openByUrl(docUrl).getId();
+    return DriveApp.getFileById(docId).getLastUpdated();
+  }catch{
+    const docId = SpreadsheetApp.openByUrl(docUrl).getId();
+    return DriveApp.getFileById(docId).getLastUpdated();
+  }
 }
 
 function ConvertGoogleDocToCleanHtml() {
